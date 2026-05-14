@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal OPC - Detalle del ticket</title>
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <div class="page-wrapper">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="assets/opc-logo.svg" alt="OPC logo">
+        <div>
+          <p class="brand-title">Portal Soporte OPC</p>
+          <p class="brand-subtitle">Detalle de ticket</p>
+        </div>
+      </div>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="nuevo-ticket.html">Crear ticket</a></li>
+          <li><a href="admin.html">Panel administrador</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <p>Consulta la historia y agrega comentarios rápidos.</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="topbar">
+        <div>
+          <h1 class="welcome-title">Detalle del ticket</h1>
+          <p class="welcome-subtitle">Revisa la información y el historial de la solicitud.</p>
+        </div>
+        <button class="logout-button">Cerrar sesión</button>
+      </div>
+
+      <div class="form-card" id="ticketContent"></div>
+    </main>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/tickets.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = OPC.requireAuth(['empleado', 'admin']);
+      if (!user) return;
+
+      const ticketId = OPCUtils.getQueryParam('id');
+      const ticket = OPC.getTicketById(ticketId);
+      const container = document.getElementById('ticketContent');
+
+      if (!ticket) {
+        container.innerHTML = '<div class="empty-state"><strong>Ticket no encontrado.</strong><p>Verifica el enlace y vuelve a intentarlo.</p></div>';
+        return;
+      }
+
+      if (user.role === 'empleado' && ticket.createdBy !== user.id) {
+        window.location.href = 'dashboard.html';
+        return;
+      }
+
+      const owner = OPC.getUserById(ticket.createdBy)?.nombre || ticket.createdBy;
+      const assignee = ticket.assignedTo ? OPC.getUserById(ticket.assignedTo)?.nombre || 'Sin asignar' : 'Sin asignar';
+
+      container.innerHTML = `
+        <div class="ticket-details">
+          <div class="detail-card">
+            <h3>Título</h3>
+            <p>${ticket.title}</p>
+          </div>
+          <div class="detail-card">
+            <h3>Estado</h3>
+            <p><span class="status-pill status-${OPC.mapStatusClass(ticket.status)}"><span></span>${ticket.status}</span></p>
+          </div>
+          <div class="detail-card">
+            <h3>Categoría</h3>
+            <p>${ticket.category}</p>
+          </div>
+          <div class="detail-card">
+            <h3>Prioridad</h3>
+            <p>${ticket.priority}</p>
+          </div>
+          <div class="detail-card">
+            <h3>Creado por</h3>
+            <p>${owner}</p>
+          </div>
+          <div class="detail-card">
+            <h3>Asignado a</h3>
+            <p>${assignee}</p>
+          </div>
+          <div class="detail-card">
+            <h3>Creado</h3>
+            <p>${OPCUtils.formatDate(ticket.createdAt)}</p>
+          </div>
+          <div class="detail-card">
+            <h3>Última actualización</h3>
+            <p>${OPCUtils.formatDate(ticket.updatedAt)}</p>
+          </div>
+          <div class="detail-card full">
+            <h3>Descripción</h3>
+            <p>${ticket.description}</p>
+          </div>
+          <div class="detail-card full">
+            <h3>Archivo adjunto</h3>
+            <p>${ticket.attachment ? ticket.attachment : 'No se adjuntó archivo'}</p>
+          </div>
+        </div>
+        <div class="form-card">
+          <div class="section-header">
+            <h2>Historial y comentarios</h2>
+          </div>
+          <div id="commentsContainer"></div>
+          <div class="form-group full" style="margin-top:16px;">
+            <label for="commentText">Agregar comentario ${user.role === 'admin' ? '(nota interna)' : ''}</label>
+            <textarea id="commentText" placeholder="Escribe una actualización o comentario..."></textarea>
+          </div>
+          <button id="commentSubmit" class="btn">Agregar comentario</button>
+        </div>
+        <div style="margin-top:18px; display:flex; gap:12px; flex-wrap:wrap;">
+          <a class="btn secondary" href="${user.role === 'admin' ? 'admin.html' : 'dashboard.html'}">Volver al panel</a>
+          <a class="btn secondary" href="nuevo-ticket.html">Crear otro ticket</a>
+        </div>
+      `;
+
+      const showComments = () => {
+        const commentsContainer = document.getElementById('commentsContainer');
+        const comments = ticket.comments.filter(item => !item.internal || user.role === 'admin');
+        if (!comments.length) {
+          commentsContainer.innerHTML = '<div class="empty-state"><strong>No hay comentarios aún.</strong><p>Agrega la primera actualización del ticket.</p></div>';
+          return;
+        }
+
+        commentsContainer.innerHTML = comments.map(comment => `
+          <article class="comment-item">
+            <strong>${comment.author}</strong>
+            <time>${OPCUtils.formatDate(comment.date)}</time>
+            <p>${comment.text}</p>
+            ${comment.internal ? '<p class="internal">Nota interna</p>' : ''}
+          </article>
+        `).join('');
+      };
+
+      showComments();
+
+      document.getElementById('commentSubmit').addEventListener('click', () => {
+        const text = document.getElementById('commentText').value.trim();
+        if (!text) {
+          showToast('Escribe un comentario antes de enviar.', 'error');
+          return;
+        }
+        OPC.addComment(ticket.id, text, user.nombre, user.role, user.role === 'admin');
+        showToast('Comentario agregado al ticket.', 'success');
+        document.getElementById('commentText').value = '';
+        ticket.comments.unshift({
+          author: user.nombre,
+          date: new Date().toISOString(),
+          text,
+          internal: user.role === 'admin'
+        });
+        showComments();
+      });
+    });
+  </script>
+</body>
+</html>

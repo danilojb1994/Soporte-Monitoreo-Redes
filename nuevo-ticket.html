@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal OPC - Nuevo Ticket</title>
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+  <div class="page-wrapper">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="assets/opc-logo.svg" alt="OPC logo">
+        <div>
+          <p class="brand-title">Portal Soporte OPC</p>
+          <p class="brand-subtitle">Crear nuevo ticket</p>
+        </div>
+      </div>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a class="active" href="nuevo-ticket.html">Crear ticket</a></li>
+          <li><a href="admin.html">Panel administrador</a></li>
+        </ul>
+      </nav>
+      <div class="sidebar-footer">
+        <p>Todos los campos se guardan localmente.</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="topbar">
+        <div>
+          <h1 class="welcome-title">Nuevo ticket de soporte</h1>
+          <p class="welcome-subtitle">Describe tu incidencia para que el equipo OPC la atienda.</p>
+        </div>
+        <button class="logout-button">Cerrar sesión</button>
+      </div>
+
+      <div class="form-card">
+        <form id="ticketForm">
+          <div class="form-grid full">
+            <div class="form-group">
+              <label for="title">Título</label>
+              <input id="title" type="text" placeholder="Ej. Problema con acceso VPN" required>
+            </div>
+            <div class="form-group">
+              <label for="category">Categoría</label>
+              <select id="category" required></select>
+            </div>
+            <div class="form-group">
+              <label for="priority">Prioridad</label>
+              <select id="priority" required></select>
+            </div>
+            <div class="form-group full">
+              <label for="description">Descripción</label>
+              <textarea id="description" placeholder="Describe lo que está ocurriendo..." required></textarea>
+            </div>
+            <div class="form-group full">
+              <label for="attachment">Adjuntar archivo (opcional)</label>
+              <input id="attachment" type="file">
+              <p class="small-note">Solo se guarda el nombre del archivo en la interfaz.</p>
+            </div>
+          </div>
+          <button class="btn fullwidth" type="submit">Enviar ticket</button>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/tickets.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const user = OPC.requireAuth(['empleado', 'admin']);
+      if (!user) return;
+      const categoryField = document.getElementById('category');
+      const priorityField = document.getElementById('priority');
+      const ticketForm = document.getElementById('ticketForm');
+
+      categoryField.innerHTML = OPC.categories.map(category => `<option value="${category}">${category}</option>`).join('');
+      priorityField.innerHTML = OPC.priorities.map(priority => `<option value="${priority}">${priority}</option>`).join('');
+
+      ticketForm.addEventListener('submit', event => {
+        event.preventDefault();
+        const title = document.getElementById('title').value.trim();
+        const category = categoryField.value;
+        const priority = priorityField.value;
+        const description = document.getElementById('description').value.trim();
+        const attachment = document.getElementById('attachment').files[0]?.name || '';
+
+        if (!title || !description) {
+          showToast('Completa el título y la descripción.', 'error');
+          return;
+        }
+
+        OPC.createTicket({
+          title,
+          category,
+          priority,
+          description,
+          attachment,
+          createdBy: user.id
+        });
+
+        showToast('Ticket creado correctamente.', 'success');
+        const nextPage = user.role === 'admin' ? 'admin.html' : 'dashboard.html';
+        setTimeout(() => {
+          window.location.href = nextPage;
+        }, 700);
+      });
+    });
+  </script>
+</body>
+</html>
