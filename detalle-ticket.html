@@ -68,45 +68,53 @@
 
       container.innerHTML = `
         <div class="ticket-details">
-          <div class="detail-card">
-            <h3>Título</h3>
-            <p>${ticket.title}</p>
+          <div class="detail-row">
+            <div class="detail-card">
+              <h3>Título</h3>
+              <p>${OPCUtils.escapeHtml(ticket.title)}</p>
+            </div>
+            <div class="detail-card">
+              <h3>Estado</h3>
+              <p><span class="status-pill status-${OPC.mapStatusClass(ticket.status)}"><span></span>${ticket.status}</span></p>
+            </div>
           </div>
-          <div class="detail-card">
-            <h3>Estado</h3>
-            <p><span class="status-pill status-${OPC.mapStatusClass(ticket.status)}"><span></span>${ticket.status}</span></p>
+          <div class="detail-row">
+            <div class="detail-card">
+              <h3>Categoría</h3>
+              <p>${ticket.category}</p>
+            </div>
+            <div class="detail-card">
+              <h3>Prioridad</h3>
+              <p>${ticket.priority}</p>
+            </div>
           </div>
-          <div class="detail-card">
-            <h3>Categoría</h3>
-            <p>${ticket.category}</p>
+          <div class="detail-row">
+            <div class="detail-card">
+              <h3>Creado por</h3>
+              <p>${OPCUtils.escapeHtml(owner)}</p>
+            </div>
+            <div class="detail-card">
+              <h3>Asignado a</h3>
+              <p>${OPCUtils.escapeHtml(assignee)}</p>
+            </div>
           </div>
-          <div class="detail-card">
-            <h3>Prioridad</h3>
-            <p>${ticket.priority}</p>
+          <div class="detail-row">
+            <div class="detail-card">
+              <h3>Creado</h3>
+              <p>${OPCUtils.formatDate(ticket.createdAt)}</p>
+            </div>
+            <div class="detail-card">
+              <h3>Última actualización</h3>
+              <p>${OPCUtils.formatDate(ticket.updatedAt)}</p>
+            </div>
           </div>
-          <div class="detail-card">
-            <h3>Creado por</h3>
-            <p>${owner}</p>
-          </div>
-          <div class="detail-card">
-            <h3>Asignado a</h3>
-            <p>${assignee}</p>
-          </div>
-          <div class="detail-card">
-            <h3>Creado</h3>
-            <p>${OPCUtils.formatDate(ticket.createdAt)}</p>
-          </div>
-          <div class="detail-card">
-            <h3>Última actualización</h3>
-            <p>${OPCUtils.formatDate(ticket.updatedAt)}</p>
-          </div>
-          <div class="detail-card full">
+          <div class="detail-card" style="grid-column: 1 / -1;">
             <h3>Descripción</h3>
-            <p>${ticket.description}</p>
+            <p>${OPCUtils.escapeHtml(ticket.description)}</p>
           </div>
-          <div class="detail-card full">
+          <div class="detail-card" style="grid-column: 1 / -1;">
             <h3>Archivo adjunto</h3>
-            <p>${ticket.attachment ? ticket.attachment : 'No se adjuntó archivo'}</p>
+            <p>${ticket.attachment ? OPCUtils.escapeHtml(ticket.attachment) : 'No se adjuntó archivo'}</p>
           </div>
         </div>
         <div class="form-card">

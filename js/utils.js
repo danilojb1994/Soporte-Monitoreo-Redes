@@ -21,6 +21,11 @@ window.showToast = (message, type = 'success') => {
 };
 
 window.OPCUtils = {
+  escapeHtml: (text) => {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  },
   formatDate: (value) => {
     if (!value) return '-';
     const date = new Date(value);

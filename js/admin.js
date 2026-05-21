@@ -60,19 +60,36 @@
             <td><span class="badge ${OPC.mapStatusClass(ticket.status)}">${ticket.status}</span></td>
             <td>${assignee}</td>
             <td>
-              <div class="filter-row">
-                <select class="state-select">
-                  ${OPC.statuses.map(status => `<option value="${status}" ${status === ticket.status ? 'selected' : ''}>${status}</option>`).join('')}
-                </select>
-                <select class="agent-select">
-                  <option value="">Sin asignar</option>
-                  ${OPC.getAgents().map(agent => `<option value="${agent.id}" ${agent.id === ticket.assignedTo ? 'selected' : ''}>${agent.nombre}</option>`).join('')}
-                </select>
+              <button class="edit-actions-btn btn secondary" style="font-size: 0.9rem; padding: 8px 14px;">Editar</button>
+            </td>
+          </tr>
+          <tr class="actions-row" style="display: none;" data-id="${ticket.id}">
+            <td colspan="7" style="padding: 16px;">
+              <div style="display: grid; gap: 12px; max-width: 800px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label style="display: block; margin-bottom: 6px; font-size: 0.9rem;">Estado</label>
+                    <select class="state-select" style="padding: 10px 12px; font-size: 0.9rem;">
+                      ${OPC.statuses.map(status => `<option value="${status}" ${status === ticket.status ? 'selected' : ''}>${status}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div class="form-group" style="margin-bottom: 0;">
+                    <label style="display: block; margin-bottom: 6px; font-size: 0.9rem;">Asignar a</label>
+                    <select class="agent-select" style="padding: 10px 12px; font-size: 0.9rem;">
+                      <option value="">Sin asignar</option>
+                      ${OPC.getAgents().map(agent => `<option value="${agent.id}" ${agent.id === ticket.assignedTo ? 'selected' : ''}>${agent.nombre}</option>`).join('')}
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label style="display: block; margin-bottom: 6px; font-size: 0.9rem;">Nota interna</label>
+                  <textarea class="comment-input" rows="3" placeholder="Agrega una nota..."></textarea>
+                </div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                  <button class="save-note-btn btn" style="padding: 10px 16px; font-size: 0.9rem;">Guardar cambios</button>
+                  <button class="close-actions-btn btn secondary" style="padding: 10px 16px; font-size: 0.9rem;">Cancelar</button>
+                </div>
               </div>
-              <div class="form-group" style="margin-top:12px;">
-                <textarea class="comment-input" rows="3" placeholder="Nota interna"></textarea>
-              </div>
-              <button class="btn secondary save-note-btn">Guardar nota</button>
             </td>
           </tr>`;
       }).join('');
@@ -83,34 +100,53 @@
     const bindTableActions = () => {
       tableBody.querySelectorAll('tr').forEach(row => {
         const ticketId = row.dataset.id;
-        const stateSelect = row.querySelector('.state-select');
-        const agentSelect = row.querySelector('.agent-select');
-        const saveNoteBtn = row.querySelector('.save-note-btn');
-        const commentInput = row.querySelector('.comment-input');
+        const editBtn = row.querySelector('.edit-actions-btn');
 
-        stateSelect.addEventListener('change', () => {
-          OPC.updateTicket(ticketId, { status: stateSelect.value });
-          showToast('Estado del ticket actualizado.', 'success');
-          renderTickets();
-        });
+        if (!editBtn) return;
 
-        agentSelect.addEventListener('change', () => {
-          OPC.updateTicket(ticketId, { assignedTo: agentSelect.value });
-          showToast('Asignación actualizada.', 'success');
-          renderTickets();
-        });
-
-        saveNoteBtn.addEventListener('click', () => {
-          const note = commentInput.value.trim();
-          if (!note) {
-            showToast('Ingresa una nota antes de guardar.', 'error');
-            return;
+        editBtn.addEventListener('click', () => {
+          const actionsRow = tableBody.querySelector(`.actions-row[data-id="${ticketId}"]`);
+          if (actionsRow) {
+            actionsRow.style.display = '';
+            attachActionHandlers(ticketId);
           }
-          OPC.addComment(ticketId, note, user.nombre, user.role, true);
-          showToast('Nota interna agregada.', 'success');
-          commentInput.value = '';
-          renderTickets();
         });
+      });
+
+      tableBody.querySelectorAll('.close-actions-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const row = btn.closest('.actions-row');
+          if (row) row.style.display = 'none';
+        });
+      });
+    };
+
+    const attachActionHandlers = (ticketId) => {
+      const actionsRow = tableBody.querySelector(`.actions-row[data-id="${ticketId}"]`);
+      if (!actionsRow) return;
+
+      const stateSelect = actionsRow.querySelector('.state-select');
+      const agentSelect = actionsRow.querySelector('.agent-select');
+      const saveNoteBtn = actionsRow.querySelector('.save-note-btn');
+      const commentInput = actionsRow.querySelector('.comment-input');
+
+      saveNoteBtn.addEventListener('click', () => {
+        const note = commentInput.value.trim();
+
+        OPC.updateTicket(ticketId, {
+          status: stateSelect.value,
+          assignedTo: agentSelect.value
+        });
+
+        if (note) {
+          OPC.addComment(ticketId, note, user.nombre, user.role, true);
+          showToast('Cambios guardados.', 'success');
+        } else {
+          showToast('Estado y asignación actualizados.', 'success');
+        }
+
+        renderTickets();
       });
     };
 
